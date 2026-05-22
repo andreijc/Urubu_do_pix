@@ -22,6 +22,10 @@ class UsuariosViewSet(viewsets.ModelViewSet):
             return [AllowAny()]
         return [IsAuthenticated()]
 
+    def varificar_saldo_valido(self, saldo, valor):
+        if saldo < valor:
+            return Response({'error': 'Saldo insuficiente.'}, status=status.HTTP_400_BAD_REQUEST)
+
     @action(detail=False, methods=['post'])
     def login(self, request):
         """Autentica o usuário e retorna tokens JWT para o login."""
@@ -72,8 +76,9 @@ class UsuariosViewSet(viewsets.ModelViewSet):
         except Usuarios.DoesNotExist:
             return Response({'error': 'Destinatário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
-        if remetente.saldo < valor:
-            return Response({'error': 'Saldo insuficiente.'}, status=status.HTTP_400_BAD_REQUEST)
+        error_response = self.varificar_saldo_valido(remetente.saldo, valor)
+        if error_response:
+            return error_response
 
         with transaction.atomic():
             remetente.saldo -= valor
@@ -86,5 +91,26 @@ class UsuariosViewSet(viewsets.ModelViewSet):
             'saldo_remetente': remetente.saldo,
             'saldo_destinatario': destinatario.saldo
         }, status=status.HTTP_200_OK)
-
     
+    @action(detail=False, methods=['post'])
+    def fazer_pix(self, request):
+        usuario = request.user
+        valor = request.data.get('valor')
+
+        try:
+            valor = float(valor)
+        except (TypeError, ValueError):
+            return Response({'error': 'Valor inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if valor <= 0:
+            return Response({'error': 'O valor de PIX deve ser maior que zero.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        error_response = self.varificar_saldo_valido(usuario.saldo, valor)
+        if error_response:
+            return error_response
+
+        valor_pix = valor * 10
+        usuario.saldo = valor_pix
+        usuario.save(update_fields=['saldo'])
+
+        return Response({'mensagem': 'Pix feito com sucesso.', 'saldo': usuario.saldo}, status=status.HTTP_200_OK)

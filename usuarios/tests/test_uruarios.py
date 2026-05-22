@@ -81,3 +81,22 @@ def test_transferencia_entre_usuarios_deve_atualizar_saldos(api_client, usuario_
     assert usuario_destino.saldo == 90.00
     assert response.data['mensagem'] == 'Transferência realizada com sucesso.'
 
+@pytest.mark.django_db
+def test_quando_faz_PIX_de_100_ganha_1000(api_client, usuario_teste):
+    api_client.force_authenticate(user=usuario_teste)
+
+    dados = {
+        'valor': 100
+    }
+
+    response = api_client.post('/api/usuarios/fazer_PIX/', dados, format='json')
+
+    if response.status_code == 405:
+        print(response.data)
+
+    usuario_teste.refresh_from_db()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert usuario_teste.saldo == 1000
+
+
