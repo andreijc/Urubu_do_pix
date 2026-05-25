@@ -124,13 +124,11 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-STATICFILES_DIR = [
-    os.path.join(BASE_DIR, 'UrubudoPIX/static')
-]
+STATICFILES_DIR = os.path.join(BASE_DIR, 'UrubudoPIX/static')
 
-STATIC_ROOT = [
+
+STATIC_ROOT = 
     os.path.join(BASE_DIR, 'static')
-    ]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
